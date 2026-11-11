@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101216">
+  <title>AmeriKIDS Remote Control</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #101216;
+      color: #f3f4f6;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 32px 20px;
+    }
+
+    main {
+      width: min(100%, 900px);
+      margin: 0 auto;
+    }
+
+    header,
+    .controls,
+    .button-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header {
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.35rem, 4vw, 1.8rem);
+    }
+
+    #status {
+      color: #9ca3af;
+      font-size: 0.9rem;
+    }
+
+    #screen {
+      display: block;
+      width: 100%;
+      height: min(62vh, 560px);
+      min-height: 280px;
+      object-fit: contain;
+      background: #000;
+      border: 1px solid #30343c;
+      border-radius: 12px;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .controls {
+      align-items: stretch;
+      flex-direction: column;
+      margin-top: 18px;
+    }
+
+    .text-control {
+      display: flex;
+      gap: 10px;
+    }
+
+    input,
+    button {
+      min-height: 44px;
+      border: 1px solid #3b414b;
+      border-radius: 8px;
+      font: inherit;
+    }
+
+    input {
+      min-width: 0;
+      flex: 1;
+      padding: 0 12px;
+      background: #191c22;
+      color: #f3f4f6;
+    }
+
+    button {
+      padding: 0 16px;
+      background: #272c35;
+      color: #f3f4f6;
+      cursor: pointer;
+    }
+
+    button:hover:not(:disabled) {
+      background: #353c48;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    #connect {
+      background: #2563eb;
+      border-color: #2563eb;
+    }
+
+    #connect:hover:not(:disabled) {
+      background: #1d4ed8;
+    }
+
+    @media (max-width: 520px) {
+      body {
+        padding: 22px 14px;
+      }
+
+      header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .button-row button {
+        flex: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>AmeriKIDS Remote Control</h1>
+      <div class="button-row">
+        <span id="status" role="status">Not connected</span>
+        <button id="connect" type="button">Connect</button>
+      </div>
+    </header>
+
+    <img id="screen" alt="Remote device screen">
+
+    <section class="controls" aria-label="Remote controls">
+      <form class="text-control" id="text-form">
+        <input id="text-input" type="text" placeholder="Type a message" aria-label="Text to send">
+        <button type="submit" disabled>Send Text</button>
+      </form>
+      <div class="button-row">
+        <button id="swipe-up" type="button" disabled>Swipe Up</button>
+        <button id="swipe-down" type="button" disabled>Swipe Down</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const SESSION_CODE = "Smallkala@08090";
+    const CONTROLLER_TOKEN = "Smallkala@08090";
+
+    const socket = io();
+    const connectButton = document.getElementById('connect');
+    const status = document.getElementById('status');
+    const screen = document.getElementById('screen');
+    const textForm = document.getElementById('text-form');
+    const textInput = document.getElementById('text-input');
+    const commandButtons = [
+      textForm.querySelector('button'),
+      document.getElementById('swipe-up'),
+      document.getElementById('swipe-down'),
+    ];
+    let connected = false;
+    let pointerStart = null;
+    let pointerCurrent = null;
+
+    function setConnected(value) {
+      connected = value;
+      commandButtons.forEach((button) => {
+        button.disabled = !connected;
+      });
+      status.textContent = connected ? 'Connected' : 'Not connected';
+    }
+
+    function emitCommand(command) {
+      if (connected) {
+        socket.emit('command', command);
+      }
+    }
+
+    function normalizedPoint(event) {
+      const bounds = screen.getBoundingClientRect();
+      return {
+        x: Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width)),
+        y: Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height)),
+      };
+    }
+
+    connectButton.addEventListener('click', () => {
+      if (!socket.connected) {
+        socket.connect();
+      }
+      connectButton.disabled = true;
+      status.textContent = 'Connecting...';
+      socket.emit('join', {
+        room: SESSION_CODE,
+        role: 'controller',
+        token: CONTROLLER_TOKEN,
+      });
+    });
+
+    socket.on('connect', () => {
+      connectButton.disabled = false;
+      status.textContent = 'Server connected';
+    });
+
+    socket.on('join:accepted', () => {
+      connectButton.disabled = true;
+      setConnected(true);
+    });
+
+    socket.on('join:error', (message) => {
+      connectButton.disabled = false;
+      setConnected(false);
+      status.textContent = message || 'Unable to join session';
+    });
+
+    socket.on('disconnect', () => {
+      connectButton.disabled = false;
+      setConnected(false);
+    });
+
+    socket.on('frame', (frame) => {
+      const imageData = typeof frame === 'string' ? frame : frame && frame.data;
+      if (typeof imageData === 'string') {
+        screen.src = imageData.startsWith('data:')
+          ? imageData
+          : `data:image/jpeg;base64,${imageData}`;
+      }
+    });
+
+    screen.addEventListener('pointerdown', (event) => {
+      if (!connected) return;
+      event.preventDefault();
+      screen.setPointerCapture(event.pointerId);
+      pointerCurrent = normalizedPoint(event);
+      pointerStart = pointerCurrent;
+    });
+
+    screen.addEventListener('pointermove', (event) => {
+      if (pointerStart) {
+        pointerCurrent = normalizedPoint(event);
+      }
+    });
+
+    screen.addEventListener('pointerup', (event) => {
+      if (!pointerStart) return;
+      pointerCurrent = normalizedPoint(event);
+      const end = pointerCurrent;
+      const start = pointerStart;
+      pointerStart = null;
+      pointerCurrent = null;
+
+      const distance = Math.hypot(end.x - start.x, end.y - start.y);
+      if (distance < 0.03) {
+        emitCommand({ type: 'tap', x: start.x, y: start.y });
+      } else {
+        emitCommand({
+          type: 'swipe',
+          start,
+          end,
+        });
+      }
+    });
+
+    screen.addEventListener('pointercancel', () => {
+      pointerStart = null;
+      pointerCurrent = null;
+    });
+
+    textForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const text = textInput.value.trim();
+      if (text) {
+        emitCommand({ type: 'text', text });
+        textInput.value = '';
+      }
+    });
+
+    document.getElementById('swipe-up').addEventListener('click', () => {
+      emitCommand({ type: 'swipe', direction: 'up' });
+    });
+
+    document.getElementById('swipe-down').addEventListener('click', () => {
+      emitCommand({ type: 'swipe', direction: 'down' });
+    });
+  </script>
+</body>
+</html>
