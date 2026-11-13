@@ -40,9 +40,6 @@ function loadConfig(env = process.env) {
   }
 
   const turnUrls = normalizeUrlList(env.TURN_URLS);
-  if (env.NODE_ENV === 'production' && (turnUrls.length === 0 || !env.TURN_SHARED_SECRET)) {
-    throw new Error('Production requires TURN_URLS and TURN_SHARED_SECRET.');
-  }
   if (turnUrls.length > 0 && !env.TURN_SHARED_SECRET) {
     throw new Error('TURN_SHARED_SECRET is required when TURN_URLS is configured.');
   }

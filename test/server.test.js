@@ -65,15 +65,27 @@ afterEach(async () => {
   }
 });
 
-test('requires deployment secrets and TURN configuration in production', () => {
+test('requires production secrets but allows signaling without TURN', () => {
   assert.throws(() => loadConfig({}), /NODE_ENV must be set/);
   assert.throws(() => loadConfig({ NODE_ENV: 'test' }), /Missing required environment variable/);
+
+  const signalingOnlyConfig = loadConfig({
+    NODE_ENV: 'production',
+    SESSION_CODE: 'room',
+    DEVICE_TOKEN: 'd'.repeat(32),
+    CONTROLLER_TOKEN: 'c'.repeat(32),
+  });
+  assert.deepEqual(createIceServers(signalingOnlyConfig), [
+    { urls: 'stun:stun.l.google.com:19302' },
+  ]);
   assert.throws(() => loadConfig({
     NODE_ENV: 'production',
     SESSION_CODE: 'room',
     DEVICE_TOKEN: 'd'.repeat(32),
     CONTROLLER_TOKEN: 'c'.repeat(32),
-  }), /Production requires TURN_URLS and TURN_SHARED_SECRET/);
+    TURN_URLS: 'turn:turn.example.test:3478',
+  }), /TURN_SHARED_SECRET is required when TURN_URLS is configured/);
+
   assert.throws(() => loadConfig({
     NODE_ENV: 'production',
     SESSION_CODE: 'room',
