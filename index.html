@@ -3,168 +3,344 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#101216">
-  <title>AmeriKIDS Remote Control</title>
+  <meta name="theme-color" content="#0b1220">
+  <title>AmeriKIDS | Remote Support</title>
   <style>
     :root {
       color-scheme: dark;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #101216;
-      color: #f3f4f6;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0b1220;
+      color: #eef2ff;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      --panel: rgba(17, 26, 43, 0.9);
+      --panel-border: rgba(148, 163, 184, 0.15);
+      --muted: #9aa8bd;
+      --accent: #65d6b1;
+      --blue: #6ea8fe;
+      --danger: #fb7185;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
-      margin: 0;
+      min-width: 320px;
       min-height: 100vh;
-      padding: 32px 20px;
+      margin: 0;
+      background:
+        radial-gradient(ellipse at 10% -15%, rgba(37, 99, 235, 0.18), transparent 40%),
+        radial-gradient(ellipse at 100% 20%, rgba(16, 185, 129, 0.08), transparent 32%),
+        #0b1220;
     }
 
-    main {
-      width: min(100%, 900px);
-      margin: 0 auto;
-    }
+    button, input { font: inherit; }
+    button { color: inherit; }
+    [hidden] { display: none !important; }
 
-    header,
-    .controls,
-    .button-row {
+    .app-shell { width: min(1500px, 100%); margin: 0 auto; padding: 26px clamp(16px, 3vw, 42px) 36px; }
+
+    .topbar, .brand, .topbar-right, .status-pill, .session-clock, .section-heading, .viewer-actions, .button-row {
       display: flex;
       align-items: center;
-      gap: 12px;
     }
 
-    header {
-      justify-content: space-between;
-      margin-bottom: 20px;
+    .topbar { justify-content: space-between; gap: 20px; margin-bottom: 28px; }
+    .brand { gap: 12px; min-width: 0; }
+    .brand-mark {
+      display: grid;
+      width: 44px;
+      height: 44px;
+      place-items: center;
+      border: 1px solid rgba(101, 214, 177, 0.4);
+      border-radius: 14px;
+      background: linear-gradient(145deg, rgba(101, 214, 177, 0.2), rgba(56, 189, 248, 0.12));
+      color: #b7ffe9;
+      font-weight: 800;
+      letter-spacing: -0.06em;
     }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(1.35rem, 4vw, 1.8rem);
+    .brand-name { margin: 0; font-size: 1.08rem; font-weight: 750; letter-spacing: -0.03em; }
+    .brand-caption { margin: 3px 0 0; color: var(--muted); font-size: 0.78rem; }
+    .topbar-right { justify-content: flex-end; gap: 12px; }
+    .status-pill, .session-clock {
+      min-height: 42px;
+      gap: 9px;
+      padding: 0 13px;
+      border: 1px solid var(--panel-border);
+      border-radius: 999px;
+      background: rgba(17, 26, 43, 0.7);
+      color: #d7e0ee;
+      font-size: 0.84rem;
     }
+    .status-light { width: 8px; height: 8px; border-radius: 50%; background: #718096; box-shadow: 0 0 0 4px rgba(113, 128, 150, 0.12); }
+    .status-pill[data-state="connecting"] .status-light { background: #fbbf24; box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.13); }
+    .status-pill[data-state="connected"] .status-light { background: var(--accent); box-shadow: 0 0 0 4px rgba(101, 214, 177, 0.13); }
+    .status-pill[data-state="error"] .status-light { background: var(--danger); box-shadow: 0 0 0 4px rgba(251, 113, 133, 0.13); }
+    .session-clock { gap: 8px; color: var(--muted); }
+    .session-clock strong { color: #eef2ff; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
 
-    #status {
-      color: #9ca3af;
-      font-size: 0.9rem;
+    .dashboard { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(290px, 0.72fr); gap: 20px; align-items: start; }
+    .panel {
+      overflow: hidden;
+      border: 1px solid var(--panel-border);
+      border-radius: 20px;
+      background: var(--panel);
+      box-shadow: 0 22px 65px rgba(0, 0, 0, 0.22);
+      backdrop-filter: blur(18px);
     }
-
-    #screen {
-      display: block;
-      width: 100%;
-      height: min(62vh, 560px);
-      min-height: 280px;
-      object-fit: contain;
-      background: #000;
-      border: 1px solid #30343c;
-      border-radius: 12px;
-      touch-action: none;
-      user-select: none;
-    }
-
-    .controls {
-      align-items: stretch;
-      flex-direction: column;
-      margin-top: 18px;
-    }
-
-    .text-control {
-      display: flex;
-      gap: 10px;
-    }
-
-    input,
-    button {
-      min-height: 44px;
-      border: 1px solid #3b414b;
-      border-radius: 8px;
-      font: inherit;
-    }
-
-    input {
-      min-width: 0;
-      flex: 1;
+    .viewer-panel { min-width: 0; }
+    .section-heading { justify-content: space-between; gap: 16px; padding: 18px 20px; border-bottom: 1px solid var(--panel-border); }
+    .section-heading h2, .card-heading { margin: 0; font-size: 0.96rem; font-weight: 680; letter-spacing: -0.015em; }
+    .section-subtitle { margin: 4px 0 0; color: var(--muted); font-size: 0.78rem; }
+    .viewer-actions { justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+    .button {
+      display: inline-flex;
+      min-height: 38px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
       padding: 0 12px;
-      background: #191c22;
-      color: #f3f4f6;
-    }
-
-    button {
-      padding: 0 16px;
-      background: #272c35;
-      color: #f3f4f6;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 10px;
+      background: rgba(30, 41, 59, 0.75);
+      color: #dce5f2;
+      font-size: 0.8rem;
+      font-weight: 600;
       cursor: pointer;
+      transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
     }
+    .button:hover:not(:disabled) { transform: translateY(-1px); border-color: rgba(148, 163, 184, 0.42); background: rgba(51, 65, 85, 0.8); }
+    .button:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+    .button:disabled { cursor: not-allowed; opacity: 0.45; }
+    .button-primary { border-color: rgba(101, 214, 177, 0.4); background: rgba(16, 105, 91, 0.38); color: #c9ffed; }
+    .button-primary:hover:not(:disabled) { background: rgba(16, 130, 105, 0.55); }
+    .button-danger { border-color: rgba(251, 113, 133, 0.3); color: #fecdd3; }
+    .button-danger:hover:not(:disabled) { border-color: rgba(251, 113, 133, 0.55); background: rgba(127, 29, 29, 0.3); }
 
-    button:hover:not(:disabled) {
-      background: #353c48;
+    .viewer-stage {
+      position: relative;
+      display: grid;
+      min-height: 340px;
+      height: min(68vh, 760px);
+      place-items: center;
+      overflow: hidden;
+      background:
+        linear-gradient(rgba(148, 163, 184, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, 0.035) 1px, transparent 1px),
+        #070b13;
+      background-size: 30px 30px;
     }
-
-    button:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
+    #viewer-stage:fullscreen {
+      width: 100vw;
+      height: 100vh;
+      min-height: 100vh;
+      border-radius: 0;
     }
-
-    #connect {
-      background: #2563eb;
-      border-color: #2563eb;
+    #screen { display: block; width: 100%; height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; touch-action: none; }
+    .screen-placeholder {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      padding: 24px;
+      text-align: center;
+      pointer-events: none;
     }
-
-    #connect:hover:not(:disabled) {
-      background: #1d4ed8;
+    .placeholder-icon {
+      display: grid;
+      width: 56px;
+      height: 56px;
+      place-items: center;
+      margin-bottom: 15px;
+      border: 1px solid rgba(148, 163, 184, 0.17);
+      border-radius: 18px;
+      background: rgba(30, 41, 59, 0.66);
+      color: #9fb1c9;
+      font-size: 1.35rem;
     }
+    .screen-placeholder strong { font-size: 0.98rem; }
+    .screen-placeholder p { max-width: 360px; margin: 8px 0 0; color: var(--muted); font-size: 0.84rem; line-height: 1.55; }
+    .viewer-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 18px;
+      border-top: 1px solid var(--panel-border);
+      color: var(--muted);
+      font-size: 0.76rem;
+    }
+    .secure-label { color: #a7e8d1; }
 
-    @media (max-width: 520px) {
-      body {
-        padding: 22px 14px;
-      }
+    .side-column { display: grid; gap: 16px; }
+    .side-card { padding: 18px; }
+    .card-heading { display: flex; align-items: center; gap: 9px; margin-bottom: 15px; }
+    .card-icon { color: var(--accent); font-size: 1rem; }
+    .control-hint { margin: -7px 0 14px; color: var(--muted); font-size: 0.77rem; line-height: 1.5; }
+    .text-form { display: flex; gap: 8px; }
+    input {
+      width: 100%;
+      min-width: 0;
+      min-height: 42px;
+      padding: 0 12px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 10px;
+      background: rgba(5, 10, 19, 0.75);
+      color: #eef2ff;
+    }
+    input::placeholder { color: #718096; }
+    .text-form .button { flex: 0 0 auto; }
+    .button-row { gap: 9px; margin-top: 10px; }
+    .button-row .button { flex: 1; }
+    .control-divider { height: 1px; margin: 16px 0; background: var(--panel-border); }
+    .connection-detail { display: grid; grid-template-columns: 1fr auto; gap: 10px; color: var(--muted); font-size: 0.8rem; }
+    .connection-detail strong { color: #dce5f2; font-weight: 550; text-align: right; }
+    .diagnostics { margin-top: 16px; border-top: 1px solid var(--panel-border); }
+    .diagnostics summary { padding-top: 14px; color: #c6d1e0; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+    .diagnostics-list { display: grid; max-height: 220px; gap: 8px; overflow: auto; margin: 12px 0 0; padding: 0; list-style: none; }
+    .diagnostic-entry { display: grid; grid-template-columns: auto 1fr; gap: 9px; color: var(--muted); font-size: 0.73rem; line-height: 1.45; overflow-wrap: anywhere; }
+    .diagnostic-time { color: #718096; font-variant-numeric: tabular-nums; }
+    .diagnostic-entry[data-level="error"] { color: #fda4af; }
+    .login-panel { margin-bottom: 18px; padding: 16px 18px; border-color: rgba(110, 168, 254, 0.28); }
+    .login-panel p { margin: 6px 0 13px; color: var(--muted); font-size: 0.82rem; }
+    .login-form { display: flex; max-width: 520px; gap: 9px; }
+    .login-form .button { flex: 0 0 auto; }
+    .footer-note { margin: 18px 2px 0; color: #74839a; font-size: 0.74rem; line-height: 1.5; }
 
-      header {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-
-      .button-row button {
-        flex: 1;
-      }
+    @media (max-width: 980px) {
+      .dashboard { grid-template-columns: minmax(0, 1fr); }
+      .side-column { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+      .viewer-stage { height: min(62vh, 680px); }
+    }
+    @media (max-width: 640px) {
+      .app-shell { padding: 18px 12px 24px; }
+      .topbar { align-items: flex-start; flex-direction: column; gap: 15px; margin-bottom: 18px; }
+      .topbar-right { width: 100%; justify-content: space-between; gap: 8px; }
+      .status-pill, .session-clock { min-height: 38px; padding: 0 10px; font-size: 0.75rem; }
+      .section-heading { align-items: flex-start; flex-direction: column; padding: 15px; }
+      .viewer-actions { width: 100%; }
+      .viewer-actions .button { flex: 1; padding: 0 8px; font-size: 0.74rem; }
+      .viewer-stage { min-height: 270px; height: 52vh; }
+      .viewer-footer { flex-direction: column; gap: 5px; padding: 11px 14px; }
+      .side-column { grid-template-columns: minmax(0, 1fr); }
+      .side-card { padding: 16px; }
+      .login-form { flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
     }
   </style>
 </head>
 <body>
-  <main>
-    <header>
-      <h1>AmeriKIDS Remote Control</h1>
-      <div class="button-row">
-        <span id="status" role="status">Not connected</span>
-        <button id="connect" type="button">Connect</button>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">AK</div>
+        <div>
+          <p class="brand-name">AmeriKIDS</p>
+          <p class="brand-caption">Private family support</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div id="status-pill" class="status-pill" data-state="idle" role="status" aria-live="polite">
+          <span class="status-light" aria-hidden="true"></span>
+          <span id="status">Checking controller session...</span>
+        </div>
+        <div class="session-clock" aria-label="Session duration">
+          <span>SESSION</span>
+          <strong id="session-duration">00:00</strong>
+        </div>
       </div>
     </header>
 
-    <img id="screen" alt="Remote device screen">
-
-    <section class="controls" aria-label="Remote controls">
-      <form class="text-control" id="text-form">
-        <input id="text-input" type="text" placeholder="Type a message" aria-label="Text to send">
-        <button type="submit" disabled>Send Text</button>
+    <section id="login-panel" class="panel login-panel" hidden aria-labelledby="login-title">
+      <h2 id="login-title" class="card-heading"><span class="card-icon" aria-hidden="true">◈</span>Controller sign-in</h2>
+      <p>Enter your controller token to authorize this browser. It is sent only to the signaling server and is not saved in the page.</p>
+      <form id="login-form" class="login-form">
+        <input id="controller-token" type="password" placeholder="Controller token" aria-label="Controller token" autocomplete="current-password" required>
+        <button id="login-button" class="button button-primary" type="submit">Authorize browser</button>
       </form>
-      <div class="button-row">
-        <button id="swipe-up" type="button" disabled>Swipe Up</button>
-        <button id="swipe-down" type="button" disabled>Swipe Down</button>
-      </div>
     </section>
+
+    <div class="dashboard">
+      <section class="panel viewer-panel" aria-labelledby="viewer-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="viewer-title">Live device screen</h2>
+            <p class="section-subtitle">Select or drag on the screen to send a tap or swipe.</p>
+          </div>
+          <div class="viewer-actions">
+            <button id="fullscreen-button" class="button" type="button" aria-label="Enter full screen" disabled>⛶ Full screen</button>
+            <button id="connect-button" class="button button-primary" type="button" hidden>Reconnect</button>
+            <button id="disconnect-button" class="button button-danger" type="button" disabled>Disconnect</button>
+          </div>
+        </div>
+        <div id="viewer-stage" class="viewer-stage">
+          <img id="screen" alt="Shared Android device screen" draggable="false">
+          <div id="screen-placeholder" class="screen-placeholder">
+            <div class="placeholder-icon" aria-hidden="true">▣</div>
+            <strong id="placeholder-title">Waiting for the device</strong>
+            <p id="placeholder-message">Once the device owner starts sharing, the live screen will appear here.</p>
+          </div>
+        </div>
+        <div class="viewer-footer">
+          <span id="stream-state">No live stream</span>
+          <span class="secure-label">Peer-to-peer connection · encrypted WebRTC data channel</span>
+        </div>
+      </section>
+
+      <aside class="side-column" aria-label="Controller tools">
+        <section class="panel side-card" aria-labelledby="controls-title">
+          <h2 id="controls-title" class="card-heading"><span class="card-icon" aria-hidden="true">⌖</span>Remote controls</h2>
+          <p class="control-hint">Controls become available after the peer connection is established.</p>
+          <form id="text-form" class="text-form">
+            <input id="text-input" type="text" placeholder="Type into the focused field" aria-label="Text to send" autocomplete="off">
+            <button class="button button-primary" type="submit" disabled>Send</button>
+          </form>
+          <div class="button-row">
+            <button id="swipe-up" class="button" type="button" disabled>↑ Swipe up</button>
+            <button id="swipe-down" class="button" type="button" disabled>↓ Swipe down</button>
+          </div>
+          <div class="control-divider"></div>
+          <div class="connection-detail">
+            <span>Session</span><strong id="session-label">AmeriKIDS support</strong>
+            <span>Transport</span><strong id="transport-label">Not connected</strong>
+          </div>
+          <details class="diagnostics">
+            <summary>Connection diagnostics</summary>
+            <ul id="diagnostics-list" class="diagnostics-list" aria-live="polite">
+              <li class="diagnostic-entry"><span class="diagnostic-time">--:--:--</span><span>Waiting for status updates.</span></li>
+            </ul>
+          </details>
+        </section>
+      </aside>
+    </div>
+    <p class="footer-note">Screen sharing remains under the device owner's control. Stop sharing from the Android app at any time.</p>
   </main>
 
-  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://amerikids-webrtc-server.onrender.com/socket.io/socket.io.js"></script>
   <script>
-    const SESSION_CODE = "Smallkala@08090";
-    const CONTROLLER_TOKEN = "Smallkala@08090";
+    const SERVER_URL = 'https://amerikids-webrtc-server.onrender.com';
+    const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
+    const socket = io(SERVER_URL, { autoConnect: false, reconnection: true });
 
-    const socket = io();
-    const connectButton = document.getElementById('connect');
+    const statusPill = document.getElementById('status-pill');
     const status = document.getElementById('status');
+    const loginPanel = document.getElementById('login-panel');
+    const loginForm = document.getElementById('login-form');
+    const loginButton = document.getElementById('login-button');
+    const tokenInput = document.getElementById('controller-token');
     const screen = document.getElementById('screen');
+    const viewerStage = document.getElementById('viewer-stage');
+    const screenPlaceholder = document.getElementById('screen-placeholder');
+    const placeholderTitle = document.getElementById('placeholder-title');
+    const placeholderMessage = document.getElementById('placeholder-message');
+    const streamState = document.getElementById('stream-state');
+    const transportLabel = document.getElementById('transport-label');
+    const sessionDuration = document.getElementById('session-duration');
+    const diagnosticsList = document.getElementById('diagnostics-list');
+    const connectButton = document.getElementById('connect-button');
+    const disconnectButton = document.getElementById('disconnect-button');
+    const fullscreenButton = document.getElementById('fullscreen-button');
     const textForm = document.getElementById('text-form');
     const textInput = document.getElementById('text-input');
     const commandButtons = [
@@ -172,130 +348,529 @@
       document.getElementById('swipe-up'),
       document.getElementById('swipe-down'),
     ];
-    let connected = false;
-    let pointerStart = null;
-    let pointerCurrent = null;
 
-    function setConnected(value) {
-      connected = value;
-      commandButtons.forEach((button) => {
-        button.disabled = !connected;
-      });
-      status.textContent = connected ? 'Connected' : 'Not connected';
+    let joined = false;
+    let dataChannelOpen = false;
+    let peerConnection = null;
+    let dataChannel = null;
+    let pendingCandidates = [];
+    let frameAssembly = null;
+    let imageUrl = null;
+    let pointerStart = null;
+    let sessionStartedAt = null;
+    let sessionTimer = null;
+    let manualDisconnect = false;
+    let firstFrameLogged = false;
+
+    function setStatus(message, state = 'idle') {
+      status.textContent = message;
+      statusPill.dataset.state = state;
+    }
+
+    function addDiagnostic(message, level = 'info') {
+      const entry = document.createElement('li');
+      entry.className = 'diagnostic-entry';
+      entry.dataset.level = level;
+      const time = document.createElement('span');
+      time.className = 'diagnostic-time';
+      time.textContent = new Date().toLocaleTimeString();
+      const detail = document.createElement('span');
+      detail.textContent = message;
+      entry.append(time, detail);
+      if (diagnosticsList.children.length === 1 &&
+          diagnosticsList.textContent.includes('Waiting for status updates')) {
+        diagnosticsList.replaceChildren();
+      }
+      diagnosticsList.append(entry);
+      while (diagnosticsList.children.length > 30) {
+        diagnosticsList.firstElementChild.remove();
+      }
+    }
+
+    function formatDuration(seconds) {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const remainder = seconds % 60;
+      return hours > 0
+        ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`
+        : `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
+    }
+
+    function startSessionTimer() {
+      if (sessionStartedAt !== null) return;
+      sessionStartedAt = Date.now();
+      sessionTimer = window.setInterval(() => {
+        sessionDuration.textContent = formatDuration(
+          Math.floor((Date.now() - sessionStartedAt) / 1000)
+        );
+      }, 1000);
+    }
+
+    function stopSessionTimer() {
+      if (sessionTimer !== null) window.clearInterval(sessionTimer);
+      sessionTimer = null;
+      sessionStartedAt = null;
+      sessionDuration.textContent = '00:00';
+    }
+
+    function setControlsEnabled(enabled) {
+      commandButtons.forEach((button) => { button.disabled = !enabled; });
+      fullscreenButton.disabled = !screen.hasAttribute('src');
+    }
+
+    function showPlaceholder(title, message) {
+      placeholderTitle.textContent = title;
+      placeholderMessage.textContent = message;
+      screenPlaceholder.hidden = false;
+      streamState.textContent = 'No live stream';
+    }
+
+    function clearScreen() {
+      if (imageUrl) URL.revokeObjectURL(imageUrl);
+      imageUrl = null;
+      screen.removeAttribute('src');
+      fullscreenButton.disabled = true;
+      showPlaceholder('Waiting for the device', 'Once the device owner starts sharing, the live screen will appear here.');
+    }
+
+    function setChannelState(open) {
+      dataChannelOpen = open;
+      setControlsEnabled(open);
+      transportLabel.textContent = open ? 'WebRTC data channel' : 'Not connected';
+      if (open) {
+        startSessionTimer();
+        setStatus('Connected to device', 'connected');
+        streamState.textContent = 'Peer-to-peer session active';
+        addDiagnostic('WebRTC data channel is open.');
+      } else {
+        stopSessionTimer();
+      }
     }
 
     function emitCommand(command) {
-      if (connected) {
-        socket.emit('command', command);
+      if (dataChannelOpen && dataChannel && dataChannel.readyState === 'open') {
+        dataChannel.send(JSON.stringify(command));
+      }
+    }
+
+    function sendSignal(message) {
+      if (socket.connected) socket.emit('signal', message);
+    }
+
+    function closePeerConnection(clearFrame = true) {
+      setChannelState(false);
+      pendingCandidates = [];
+      frameAssembly = null;
+      const channel = dataChannel;
+      const connection = peerConnection;
+      dataChannel = null;
+      peerConnection = null;
+      if (channel) {
+        channel.onopen = null;
+        channel.onclose = null;
+        channel.onerror = null;
+        channel.onmessage = null;
+        channel.close();
+      }
+      if (connection) connection.close();
+      if (clearFrame) clearScreen();
+    }
+
+    function setupDataChannel(channel) {
+      dataChannel = channel;
+      channel.binaryType = 'arraybuffer';
+      channel.onopen = () => {
+        if (dataChannel !== channel) return;
+        setChannelState(true);
+        addDiagnostic('Remote-control data channel opened.');
+      };
+      channel.onclose = () => {
+        if (dataChannel !== channel) return;
+        setChannelState(false);
+        addDiagnostic('Remote-control data channel closed.', 'error');
+      };
+      channel.onerror = () => {
+        if (dataChannel !== channel) return;
+        setStatus('Data channel error', 'error');
+        addDiagnostic('The WebRTC data channel reported an error.', 'error');
+      };
+      channel.onmessage = async (event) => {
+        if (typeof event.data === 'string') {
+          let message;
+          try {
+            message = JSON.parse(event.data);
+          } catch (error) {
+            addDiagnostic(`Invalid frame header: ${error.message}`, 'error');
+            return;
+          }
+          if (message.type !== 'frame' || !Number.isInteger(message.chunks) ||
+              message.chunks < 1 || message.chunks > 200) {
+            addDiagnostic('Received an unsupported or malformed frame header.', 'error');
+            frameAssembly = null;
+            return;
+          }
+          frameAssembly = {
+            id: message.id,
+            chunks: message.chunks,
+            parts: [],
+            received: 0,
+          };
+          return;
+        }
+
+        if (!frameAssembly) return;
+        const bytes = event.data instanceof ArrayBuffer
+          ? event.data
+          : await event.data.arrayBuffer();
+        frameAssembly.parts.push(bytes);
+        frameAssembly.received += 1;
+        if (frameAssembly.received !== frameAssembly.chunks) return;
+
+        const completedFrame = frameAssembly;
+        frameAssembly = null;
+        if (imageUrl) URL.revokeObjectURL(imageUrl);
+        imageUrl = URL.createObjectURL(new Blob(completedFrame.parts, { type: 'image/jpeg' }));
+        screen.src = imageUrl;
+        screenPlaceholder.hidden = true;
+        fullscreenButton.disabled = false;
+        streamState.textContent = 'Live screen received';
+        if (!firstFrameLogged) {
+          addDiagnostic('First screen frame received.');
+          firstFrameLogged = true;
+        }
+      };
+    }
+
+    function createPeerConnection() {
+      closePeerConnection(false);
+      const connection = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+      peerConnection = connection;
+      connection.onicecandidate = ({ candidate }) => {
+        if (candidate) sendSignal({ type: 'ice', candidate: candidate.toJSON() });
+      };
+      connection.oniceconnectionstatechange = () => {
+        if (peerConnection !== connection) return;
+        const state = connection.iceConnectionState;
+        transportLabel.textContent = `ICE ${state}`;
+        addDiagnostic(`ICE connection state: ${state}.`, state === 'failed' ? 'error' : 'info');
+      };
+      connection.onconnectionstatechange = () => {
+        if (peerConnection !== connection) return;
+        const state = connection.connectionState;
+        addDiagnostic(`Peer connection state: ${state}.`, state === 'failed' ? 'error' : 'info');
+        if (state === 'connecting') {
+          setStatus('Establishing secure peer connection...', 'connecting');
+          placeholderTitle.textContent = 'Connecting to the device';
+          placeholderMessage.textContent = 'Negotiating a direct WebRTC connection.';
+        } else if (state === 'failed' || state === 'closed') {
+          setStatus('Peer connection failed', 'error');
+          addDiagnostic('Reconnect to retry the peer connection.', 'error');
+          closePeerConnection();
+          if (socket.connected) socket.disconnect();
+        }
+      };
+      connection.ondatachannel = ({ channel }) => {
+        if (channel.label !== 'remote-control') {
+          addDiagnostic(`Ignored unexpected data channel: ${channel.label}.`, 'error');
+          channel.close();
+          return;
+        }
+        setupDataChannel(channel);
+      };
+      return connection;
+    }
+
+    async function addPendingCandidates(connection) {
+      const candidates = pendingCandidates;
+      pendingCandidates = [];
+      for (const candidate of candidates) {
+        await connection.addIceCandidate(candidate);
+      }
+    }
+
+    async function handleSignal(message) {
+      if (!message || !['offer', 'answer', 'ice'].includes(message.type)) {
+        addDiagnostic('Ignored an unsupported signaling message.', 'error');
+        return;
+      }
+      try {
+        if (message.type === 'ice') {
+          if (peerConnection && peerConnection.remoteDescription) {
+            await peerConnection.addIceCandidate(message.candidate);
+          } else {
+            pendingCandidates.push(message.candidate);
+          }
+          return;
+        }
+
+        const connection = peerConnection || createPeerConnection();
+        await connection.setRemoteDescription({ type: message.type, sdp: message.sdp });
+        await addPendingCandidates(connection);
+        if (message.type === 'offer') {
+          const answer = await connection.createAnswer();
+          await connection.setLocalDescription(answer);
+          sendSignal({ type: 'answer', sdp: connection.localDescription.sdp });
+          addDiagnostic('WebRTC offer accepted; answer sent.');
+        }
+      } catch (error) {
+        console.error('WebRTC signaling failed:', error);
+        setStatus('WebRTC negotiation failed', 'error');
+        addDiagnostic(`WebRTC negotiation failed: ${error.message}`, 'error');
+        closePeerConnection();
+        if (socket.connected) socket.disconnect();
+      }
+    }
+
+    async function startOffer() {
+      if (!joined || peerConnection) return;
+      const connection = createPeerConnection();
+      setupDataChannel(connection.createDataChannel('remote-control', { ordered: true }));
+      try {
+        setStatus('Connecting to device...', 'connecting');
+        placeholderTitle.textContent = 'Connecting to the device';
+        placeholderMessage.textContent = 'Waiting for the Android device to accept the peer connection.';
+        const offer = await connection.createOffer();
+        await connection.setLocalDescription(offer);
+        sendSignal({ type: 'offer', sdp: connection.localDescription.sdp });
+        addDiagnostic('WebRTC offer sent to the device.');
+      } catch (error) {
+        console.error('Unable to create WebRTC offer:', error);
+        setStatus('Unable to start connection', 'error');
+        addDiagnostic(`Could not create WebRTC offer: ${error.message}`, 'error');
+        closePeerConnection();
+        if (socket.connected) socket.disconnect();
       }
     }
 
     function normalizedPoint(event) {
       const bounds = screen.getBoundingClientRect();
+      const sourceWidth = screen.naturalWidth || bounds.width;
+      const sourceHeight = screen.naturalHeight || bounds.height;
+      const scale = Math.min(bounds.width / sourceWidth, bounds.height / sourceHeight);
+      const displayWidth = sourceWidth * scale;
+      const displayHeight = sourceHeight * scale;
+      const offsetX = (bounds.width - displayWidth) / 2;
+      const offsetY = (bounds.height - displayHeight) / 2;
       return {
-        x: Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width)),
-        y: Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height)),
+        x: Math.max(0, Math.min(1, (event.clientX - bounds.left - offsetX) / displayWidth)),
+        y: Math.max(0, Math.min(1, (event.clientY - bounds.top - offsetY) / displayHeight)),
       };
     }
 
-    connectButton.addEventListener('click', () => {
-      if (!socket.connected) {
-        socket.connect();
+    function connectToSignaling() {
+      manualDisconnect = false;
+      connectButton.hidden = true;
+      setStatus('Connecting to signaling server...', 'connecting');
+      transportLabel.textContent = 'Connecting...';
+      addDiagnostic(`Connecting to ${SERVER_URL}.`);
+      socket.connect();
+    }
+
+    loginForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      loginButton.disabled = true;
+      setStatus('Authorizing controller...', 'connecting');
+      try {
+        const response = await fetch(`${SERVER_URL}/session/login`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: tokenInput.value }),
+        });
+        if (!response.ok) {
+          const detail = response.status === 401
+            ? 'The controller token was rejected.'
+            : `Sign-in failed with HTTP ${response.status}.`;
+          setStatus(detail, 'error');
+          addDiagnostic(detail, 'error');
+          return;
+        }
+        loginPanel.hidden = true;
+        tokenInput.value = '';
+        addDiagnostic('Controller authorized; session cookie received.');
+        connectToSignaling();
+      } catch (error) {
+        console.error('Controller sign-in failed:', error);
+        setStatus('Could not reach the signaling server', 'error');
+        addDiagnostic(`Controller sign-in failed: ${error.message}`, 'error');
+      } finally {
+        tokenInput.value = '';
+        loginButton.disabled = false;
       }
-      connectButton.disabled = true;
-      status.textContent = 'Connecting...';
-      socket.emit('join', {
-        room: SESSION_CODE,
-        role: 'controller',
-        token: CONTROLLER_TOKEN,
-      });
     });
 
     socket.on('connect', () => {
-      connectButton.disabled = false;
-      status.textContent = 'Server connected';
+      transportLabel.textContent = 'Signaling connected';
+      setStatus('Authorizing session...', 'connecting');
+      addDiagnostic('Socket.IO signaling connection established.');
+      socket.emit('join', { role: 'controller' });
     });
 
-    socket.on('join:accepted', () => {
-      connectButton.disabled = true;
-      setConnected(true);
+    socket.on('connect_error', (error) => {
+      console.error('Signaling connection failed:', error);
+      setStatus('Could not connect to signaling server', 'error');
+      addDiagnostic(`Socket.IO connection error: ${error.message}`, 'error');
+      connectButton.hidden = false;
+    });
+
+    socket.on('join:accepted', ({ peerPresent } = {}) => {
+      joined = true;
+      loginPanel.hidden = true;
+      connectButton.hidden = true;
+      disconnectButton.disabled = false;
+      addDiagnostic('Session authorization accepted by signaling server.');
+      if (peerPresent) {
+        setStatus('Device found; establishing connection...', 'connecting');
+        startOffer();
+      } else {
+        setStatus('Waiting for the device', 'idle');
+        placeholderTitle.textContent = 'Waiting for the device';
+        placeholderMessage.textContent = 'Start screen sharing on the Android device to begin the session.';
+      }
     });
 
     socket.on('join:error', (message) => {
-      connectButton.disabled = false;
-      setConnected(false);
-      status.textContent = message || 'Unable to join session';
+      joined = false;
+      const detail = typeof message === 'string' ? message : 'Session authorization was rejected.';
+      setStatus(detail, 'error');
+      addDiagnostic(`Session join rejected: ${detail}`, 'error');
+      loginPanel.hidden = false;
+      socket.disconnect();
     });
 
-    socket.on('disconnect', () => {
-      connectButton.disabled = false;
-      setConnected(false);
+    socket.on('signal', handleSignal);
+    socket.on('peer:joined', ({ role } = {}) => {
+      if (role === 'device') {
+        addDiagnostic('Android device joined the session.');
+        if (!peerConnection) startOffer();
+      }
+    });
+    socket.on('peer:left', ({ role } = {}) => {
+      if (role !== 'device') return;
+      addDiagnostic('Android device left the session.', 'error');
+      closePeerConnection();
+      setStatus('Device disconnected', 'error');
+      placeholderTitle.textContent = 'Device disconnected';
+      placeholderMessage.textContent = 'The device owner stopped sharing or lost connection.';
     });
 
-    socket.on('frame', (frame) => {
-      const imageData = typeof frame === 'string' ? frame : frame && frame.data;
-      if (typeof imageData === 'string') {
-        screen.src = imageData.startsWith('data:')
-          ? imageData
-          : `data:image/jpeg;base64,${imageData}`;
+    socket.on('disconnect', (reason) => {
+      joined = false;
+      closePeerConnection();
+      disconnectButton.disabled = true;
+      transportLabel.textContent = 'Signaling disconnected';
+      if (manualDisconnect || reason === 'io server disconnect' || reason === 'io client disconnect') {
+        setStatus(manualDisconnect ? 'Disconnected' : 'Signaling server disconnected', 'idle');
+        connectButton.hidden = false;
+      } else {
+        setStatus('Signaling connection lost; retrying...', 'connecting');
+        addDiagnostic(`Socket.IO disconnected (${reason}); automatic reconnect is enabled.`, 'error');
       }
     });
 
     screen.addEventListener('pointerdown', (event) => {
-      if (!connected) return;
+      if (!dataChannelOpen || !screen.src) return;
       event.preventDefault();
       screen.setPointerCapture(event.pointerId);
-      pointerCurrent = normalizedPoint(event);
-      pointerStart = pointerCurrent;
-    });
-
-    screen.addEventListener('pointermove', (event) => {
-      if (pointerStart) {
-        pointerCurrent = normalizedPoint(event);
-      }
+      pointerStart = normalizedPoint(event);
     });
 
     screen.addEventListener('pointerup', (event) => {
       if (!pointerStart) return;
-      pointerCurrent = normalizedPoint(event);
-      const end = pointerCurrent;
+      const end = normalizedPoint(event);
       const start = pointerStart;
       pointerStart = null;
-      pointerCurrent = null;
-
       const distance = Math.hypot(end.x - start.x, end.y - start.y);
       if (distance < 0.03) {
         emitCommand({ type: 'tap', x: start.x, y: start.y });
       } else {
         emitCommand({
           type: 'swipe',
-          start,
-          end,
+          x1: start.x,
+          y1: start.y,
+          x2: end.x,
+          y2: end.y,
+          duration: 300,
         });
       }
     });
 
-    screen.addEventListener('pointercancel', () => {
-      pointerStart = null;
-      pointerCurrent = null;
-    });
+    screen.addEventListener('pointercancel', () => { pointerStart = null; });
 
     textForm.addEventListener('submit', (event) => {
       event.preventDefault();
       const text = textInput.value.trim();
-      if (text) {
+      if (text && dataChannelOpen) {
         emitCommand({ type: 'text', text });
         textInput.value = '';
       }
     });
 
     document.getElementById('swipe-up').addEventListener('click', () => {
-      emitCommand({ type: 'swipe', direction: 'up' });
+      emitCommand({ type: 'swipe', x1: 0.5, y1: 0.8, x2: 0.5, y2: 0.2, duration: 300 });
+    });
+    document.getElementById('swipe-down').addEventListener('click', () => {
+      emitCommand({ type: 'swipe', x1: 0.5, y1: 0.2, x2: 0.5, y2: 0.8, duration: 300 });
     });
 
-    document.getElementById('swipe-down').addEventListener('click', () => {
-      emitCommand({ type: 'swipe', direction: 'down' });
+    disconnectButton.addEventListener('click', () => {
+      manualDisconnect = true;
+      joined = false;
+      if (socket.connected) socket.disconnect();
+      closePeerConnection();
+      clearScreen();
+      setStatus('Disconnected', 'idle');
+      connectButton.hidden = false;
+      disconnectButton.disabled = true;
+      addDiagnostic('Controller disconnected from the session.');
     });
+
+    connectButton.addEventListener('click', () => {
+      if (!socket.connected) connectToSignaling();
+    });
+
+    fullscreenButton.addEventListener('click', async () => {
+      try {
+        if (document.fullscreenElement) {
+          await document.exitFullscreen();
+        } else {
+          await viewerStage.requestFullscreen();
+        }
+      } catch (error) {
+        addDiagnostic(`Full-screen mode was unavailable: ${error.message}`, 'error');
+      }
+    });
+
+    document.addEventListener('fullscreenchange', () => {
+      fullscreenButton.textContent = document.fullscreenElement ? '⛶ Exit full screen' : '⛶ Full screen';
+      fullscreenButton.setAttribute(
+        'aria-label',
+        document.fullscreenElement ? 'Exit full screen' : 'Enter full screen'
+      );
+    });
+
+    async function initializeController() {
+      try {
+        const response = await fetch(`${SERVER_URL}/session`, { credentials: 'include' });
+        if (response.ok) {
+          addDiagnostic('Existing controller session found.');
+          connectToSignaling();
+        } else if (response.status === 401) {
+          loginPanel.hidden = false;
+          setStatus('Controller authorization required', 'idle');
+          addDiagnostic('Sign in with the controller token to authorize this browser.');
+        } else {
+          throw new Error(`Unexpected session response: HTTP ${response.status}`);
+        }
+      } catch (error) {
+        console.error('Unable to check controller session:', error);
+        loginPanel.hidden = false;
+        setStatus('Could not check controller authorization', 'error');
+        addDiagnostic(`Session check failed: ${error.message}`, 'error');
+      }
+    }
+
+    initializeController();
   </script>
 </body>
 </html>
