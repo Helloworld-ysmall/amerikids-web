@@ -317,11 +317,10 @@
     <p class="footer-note">Screen sharing remains under the device owner's control. Stop sharing from the Android app at any time.</p>
   </main>
 
-  <script src="https://amerikids-webrtc-server.onrender.com/socket.io/socket.io.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
   <script>
-    const SERVER_URL = 'https://amerikids-webrtc-server.onrender.com';
-    const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
-    const socket = io(SERVER_URL, { autoConnect: false, reconnection: true });
+    let ICE_SERVERS = [];
+    const socket = io({ autoConnect: false, reconnection: true });
 
     const statusPill = document.getElementById('status-pill');
     const status = document.getElementById('status');
@@ -543,6 +542,9 @@
 
     function createPeerConnection() {
       closePeerConnection(false);
+      if (ICE_SERVERS.length === 0) {
+        throw new Error('The signaling server did not provide ICE server configuration.');
+      }
       const connection = new RTCPeerConnection({ iceServers: ICE_SERVERS });
       peerConnection = connection;
       connection.onicecandidate = ({ candidate }) => {
@@ -662,8 +664,32 @@
       connectButton.hidden = true;
       setStatus('Connecting to signaling server...', 'connecting');
       transportLabel.textContent = 'Connecting...';
-      addDiagnostic(`Connecting to ${SERVER_URL}.`);
+      addDiagnostic(`Connecting to ${window.location.origin}.`);
       socket.connect();
+    }
+
+    async function checkControllerSession() {
+      const retryWindowMs = 120000;
+      const maxRetryDelayMs = 15000;
+      const startedAt = Date.now();
+      let attempt = 0;
+      while (true) {
+        try {
+          const response = await fetch('/session', { credentials: 'same-origin' });
+          if (response.status < 500 || Date.now() - startedAt >= retryWindowMs) return response;
+          addDiagnostic(`Session check returned HTTP ${response.status}; retrying while the server starts.`);
+        } catch (error) {
+          if (Date.now() - startedAt >= retryWindowMs) throw error;
+          addDiagnostic(`Session check failed (${error.message}); retrying while the server starts.`);
+        }
+        const remainingMs = retryWindowMs - (Date.now() - startedAt);
+        const exponentialDelayMs = Math.min(maxRetryDelayMs, 1000 * (2 ** attempt));
+        const jitteredDelayMs = Math.round(exponentialDelayMs * (0.8 + Math.random() * 0.4));
+        await new Promise((resolve) =>
+          window.setTimeout(resolve, Math.min(remainingMs, jitteredDelayMs))
+        );
+        attempt += 1;
+      }
     }
 
     loginForm.addEventListener('submit', async (event) => {
@@ -671,7 +697,7 @@
       loginButton.disabled = true;
       setStatus('Authorizing controller...', 'connecting');
       try {
-        const response = await fetch(`${SERVER_URL}/session/login`, {
+        const response = await fetch('/session/login', {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
@@ -713,7 +739,15 @@
       connectButton.hidden = false;
     });
 
-    socket.on('join:accepted', ({ peerPresent } = {}) => {
+    socket.on('join:accepted', ({ peerPresent, iceServers } = {}) => {
+      if (!Array.isArray(iceServers) || iceServers.length === 0 ||
+          iceServers.some((server) => !server || !server.urls)) {
+        setStatus('ICE server configuration is unavailable', 'error');
+        addDiagnostic('The signaling server returned invalid ICE server configuration.', 'error');
+        socket.disconnect();
+        return;
+      }
+      ICE_SERVERS = iceServers;
       joined = true;
       loginPanel.hidden = true;
       connectButton.hidden = true;
@@ -851,7 +885,7 @@
 
     async function initializeController() {
       try {
-        const response = await fetch(`${SERVER_URL}/session`, { credentials: 'include' });
+        const response = await checkControllerSession();
         if (response.ok) {
           addDiagnostic('Existing controller session found.');
           connectToSignaling();
